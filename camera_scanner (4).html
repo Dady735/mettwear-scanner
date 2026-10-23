@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Mettwear Camera Scanner</title>
+  <style>
+    :root {
+      color-scheme:light;
+      --bg:#f1f2f6;
+      --panel:#fff;
+      --line:#e9e9ed;
+      --text:#202126;
+      --muted:#8b8c94;
+      --coral:#ff805c;
+      --coral-deep:#ed6e4f;
+      --coral-soft:#fff0eb;
+      --green:#21966a;
+      --red:#c84f54;
+      --gold:#d3a34d;
+      --radius-sm:12px;
+      --radius-md:18px;
+      --radius-lg:27px;
+      --pill:999px;
+      --shadow:0 22px 60px rgba(35,39,52,.12);
+    }
+    * { box-sizing:border-box; }
+    html { min-height:100%; scroll-behavior:smooth; }
+    body {
+      min-height:100vh; margin:0; padding:28px 16px 40px;
+      background:
+        radial-gradient(620px 480px at 2% 0%,rgba(255,128,92,.09),transparent 62%),
+        linear-gradient(155deg,#f4f5f8,#eff0f4 62%,#f6f6f8);
+      color:var(--text);
+      font:15px/1.58 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    button { font:inherit; }
+    main { width:min(100%,480px); margin:0 auto; }
+    .card {
+      background:var(--panel); border:1px solid rgba(229,230,235,.96);
+      border-radius:34px; padding:22px 23px 24px; box-shadow:var(--shadow); overflow:hidden;
+    }
+    .sheet-grabber { width:44px; height:4px; border-radius:var(--pill); margin:0 auto 20px; background:#d6d7dc; }
+    .scanner-topbar { display:flex; align-items:center; gap:10px; margin:0 1px 21px; }
+    .brand-mark {
+      width:36px; height:36px; display:grid; place-items:center; flex:0 0 36px;
+      border:1px solid #ffd4c7; border-radius:12px; color:var(--coral-deep);
+      background:#fff8f5; font-size:10px; font-weight:950; letter-spacing:.04em;
+    }
+    .brand-kicker { color:#9a9ba2; font-size:9px; line-height:1.2; font-weight:850; letter-spacing:.14em; text-transform:uppercase; }
+    .format-pill { margin-left:auto; border:1px solid #f0ecea; border-radius:var(--pill); padding:6px 10px; color:#777980; background:#f8f8f9; font-size:9px; font-weight:800; letter-spacing:.08em; white-space:nowrap; }
+    .screen-heading { text-align:center; margin:0 auto 18px; max-width:360px; }
+    h1 { font-size:21px; line-height:1.25; letter-spacing:-.035em; margin:0 0 7px; }
+    .intro { color:var(--muted); font-size:12px; line-height:1.55; margin:0; }
+    .connection-card {
+      display:flex; align-items:flex-start; gap:9px; padding:9px 12px; margin:0 0 14px;
+      border:1px solid #e4f0e7; border-radius:14px; background:#f4faf5;
+    }
+    .connection-dot { width:7px; height:7px; margin-top:6px; border-radius:50%; background:var(--green); box-shadow:0 0 10px rgba(33,150,106,.28); flex:0 0 7px; }
+    .connection-card.standalone { border-color:#f1e7d4; background:#fffbf3; }
+    .connection-card.standalone .connection-dot { background:var(--gold); box-shadow:0 0 10px rgba(211,163,77,.25); }
+    .connection-card.standalone #connection { color:#9a7738; }
+    #connection { margin:0; color:#4f8265; font-size:11px; line-height:1.45; }
+    .row { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:12px; }
+    button {
+      border:1px solid rgba(238,109,78,.18); border-radius:14px; padding:11px 15px; cursor:pointer;
+      color:#fff; font-size:12px; font-weight:800; letter-spacing:.01em;
+      background:linear-gradient(135deg,#ff916e,#f47454); box-shadow:0 7px 16px rgba(255,128,92,.2);
+      transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+    }
+    button:hover:not(:disabled) { transform:translateY(-1px); filter:brightness(1.035); box-shadow:0 10px 21px rgba(255,128,92,.24); }
+    button:active:not(:disabled) { transform:translateY(0); }
+    button.secondary { color:#494b52; background:linear-gradient(145deg,#f8f8fa,#f0f1f3); border-color:#e6e7eb; box-shadow:none; }
+    button.stop { color:#fff; background:linear-gradient(135deg,#e7736e,#d45555); border-color:rgba(212,85,85,.18); box-shadow:0 7px 16px rgba(212,85,85,.16); }
+    button:disabled { opacity:.48; cursor:not-allowed; transform:none; box-shadow:none; }
+    button:focus-visible { outline:3px solid rgba(255,128,92,.28); outline-offset:3px; }
+    .reader-stage {
+      width:100%; aspect-ratio:1/1; min-height:270px; max-height:370px; position:relative; overflow:hidden;
+      border:1px solid #eeeef1; border-radius:26px; background:#f7f7f8; isolation:isolate;
+    }
+    #reader { position:absolute; inset:0; z-index:0; width:100%; height:100%; min-height:0; overflow:hidden; border:0; border-radius:25px; background:#f7f7f8; }
+    #reader video { display:block; width:100% !important; height:100% !important; object-fit:cover; border-radius:25px !important; }
+    #reader img,#reader canvas { max-width:100%; border-radius:16px; }
+    #reader__scan_region,#reader__dashboard,#reader__scan_region video { border-radius:22px !important; overflow:hidden; }
+    #reader__dashboard { background:rgba(255,255,255,.92); border-radius:16px; }
+    #reader select,#reader input { width:auto; max-width:100%; border:1px solid #e5e6eb; border-radius:11px; padding:8px 10px; color:#35373d; background:#fff; }
+    #reader__dashboard_section_csr button,#reader__dashboard_section_swaplink { border-radius:11px !important; }
+    .camera-placeholder {
+      position:absolute; inset:0; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+      color:#777a83; text-align:center; pointer-events:none; background:linear-gradient(145deg,#fafafb,#f3f4f6);
+    }
+    .camera-placeholder svg { width:44px; height:44px; color:#c4c5ca; }
+    .camera-placeholder strong { color:#555760; font-size:12px; }
+    .camera-placeholder span { color:#9698a0; font-size:10px; }
+    .scan-overlay { position:absolute; inset:0; z-index:2; display:grid; place-items:center; pointer-events:none; }
+    .scan-frame { width:min(64%,240px); aspect-ratio:1/1; position:relative; }
+    .scan-corner { width:31px; height:31px; position:absolute; border-color:var(--coral); border-style:solid; }
+    .scan-corner.tl { top:0; left:0; border-width:4px 0 0 4px; border-top-left-radius:15px; }
+    .scan-corner.tr { top:0; right:0; border-width:4px 4px 0 0; border-top-right-radius:15px; }
+    .scan-corner.bl { bottom:0; left:0; border-width:0 0 4px 4px; border-bottom-left-radius:15px; }
+    .scan-corner.br { bottom:0; right:0; border-width:0 4px 4px 0; border-bottom-right-radius:15px; }
+    .scan-line { height:3px; position:absolute; left:-7%; right:-7%; top:50%; border-radius:var(--pill); background:var(--coral); box-shadow:0 0 12px rgba(255,128,92,.46); animation:scan-sweep 2.4s ease-in-out infinite alternate; }
+    @keyframes scan-sweep { from { transform:translateY(-58px); opacity:.72; } to { transform:translateY(58px); opacity:1; } }
+    .scan-hint { position:absolute; bottom:13px; left:50%; transform:translateX(-50%); color:#777a83; font-size:9px; font-weight:800; letter-spacing:.12em; white-space:nowrap; text-shadow:0 1px 4px rgba(255,255,255,.8); }
+    #status {
+      min-height:20px; margin:12px 1px 0; padding:8px 11px; border:1px solid transparent;
+      border-radius:13px; color:#7c7e86; background:#f7f7f9; font-size:11px; line-height:1.45; white-space:pre-wrap;
+    }
+    #status:empty { display:none; }
+    #status.error { color:#b94c51; border-color:#f3d7d8; background:#fff0f0; }
+    #status.success { color:#247751; border-color:#d9eedf; background:#edf8f1; }
+    .code {
+      display:block; margin-top:12px; padding:12px 14px; border:1px solid #f2d8cf;
+      border-radius:15px; background:#fff8f5; color:#bd5d44; overflow-wrap:anywhere;
+      font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+    .action-row { display:grid; grid-template-columns:1fr auto; gap:9px; margin-top:14px; }
+    .action-row button { margin:0; }
+    .helper { color:#9698a0; font-size:10px; line-height:1.5; text-align:center; margin:14px 4px 0; }
+    .divider { height:1px; background:#f0f0f2; margin:16px 0 0; }
+    a { color:#bc5d43; }
+    @media(max-width:520px) {
+      body { padding:12px 10px 20px; }
+      main { width:100%; }
+      .card { padding:17px 17px 20px; border-radius:31px; }
+      .sheet-grabber { margin-bottom:16px; }
+      .scanner-topbar { margin-bottom:18px; }
+      h1 { font-size:20px; }
+      .reader-stage { min-height:250px; border-radius:23px; }
+      #reader,#reader video { border-radius:22px !important; }
+      .scan-frame { width:min(65%,220px); }
+      .row button { flex:1 1 130px; }
+      .action-row { grid-template-columns:1fr; }
+    }
+    @media(prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto !important; animation-duration:.01ms !important; transition-duration:.01ms !important; }
+    }
+  </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card" aria-label="Mettwear camera scanner">
+      <div class="sheet-grabber" aria-hidden="true"></div>
+      <div class="scanner-topbar">
+        <div class="brand-mark" aria-hidden="true">MW</div>
+        <span class="brand-kicker">Mettwear returns</span>
+        <span class="format-pill">QR + BARCODE</span>
+      </div>
+      <div class="screen-heading">
+        <h1>Scan QR code</h1>
+        <p class="intro">Place the code inside the frame. Hold steady for a quick, clear scan.</p>
+      </div>
+      <div class="connection-card"><span class="connection-dot" aria-hidden="true"></span><p id="connection" role="status" aria-live="polite">Checking dashboard connection…</p></div>
+      <div class="reader-stage">
+        <div id="reader" aria-label="Camera preview"></div>
+        <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="13" width="36" height="26" rx="6" stroke="currentColor" stroke-width="2.5"/><path d="m17 13 3-5h8l3 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="26" r="7" stroke="currentColor" stroke-width="2.5"/></svg>
+          <strong>Camera preview</strong>
+          <span>Tap “Start camera” to begin scanning</span>
+        </div>
+        <div class="scan-overlay" aria-hidden="true">
+          <div class="scan-frame">
+            <span class="scan-corner tl"></span><span class="scan-corner tr"></span>
+            <span class="scan-corner bl"></span><span class="scan-corner br"></span>
+            <span class="scan-line"></span>
+          </div>
+          <span class="scan-hint">ALIGN YOUR CODE</span>
+        </div>
+      </div>
+      <div class="row">
+        <button id="startButton" onclick="startScanner()">Start camera</button>
+        <button id="stopButton" class="stop" onclick="stopScanner()" disabled>Stop camera</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <div id="lastCode" class="code" style="display:none"></div>
+      <div class="divider"></div>
+      <div class="action-row">
+        <button onclick="sendLastCode(true)" id="sendButton" disabled>Send scan to dashboard</button>
+        <button class="secondary" onclick="window.close()">Close scanner</button>
+      </div>
+      <p class="helper">Camera access requires HTTPS. If the preview does not start, allow access for this site and make sure another app is not using the camera.</p>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const returnOrigin = params.get('returnOrigin') || '';
+    const connection = document.getElementById('connection');
+    const statusEl = document.getElementById('status');
+    const lastCodeEl = document.getElementById('lastCode');
+    const sendButton = document.getElementById('sendButton');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    let scanner = null;
+    let lastCode = '';
+    let lastSentCode = '';
+    let clearCodeTimer = null;
+
+    const connectionCard = document.querySelector('.connection-card');
+    if (window.opener && returnOrigin) {
+      connection.textContent = 'Connected to the dashboard. Scanned codes will be sent back automatically.';
+      connectionCard.classList.add('connected');
+    } else {
+      connection.textContent = 'Standalone mode. Open this page from the app Scanner tab to return scans to the dashboard.';
+      connectionCard.classList.add('standalone');
+    }
+
+    function setStatus(message, kind) {
+      statusEl.textContent = message || '';
+      statusEl.className = kind || '';
+    }
+
+    function supportedFormats() {
+      const F = window.Html5QrcodeSupportedFormats;
+      if (!F) return undefined;
+      return [F.QR_CODE, F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR, F.DATA_MATRIX, F.PDF_417, F.AZTEC].filter(function(value) { return value !== undefined; });
+    }
+
+    function onScanSuccess(decodedText) {
+      if (clearCodeTimer) { clearTimeout(clearCodeTimer); clearCodeTimer = null; }
+      const code = String(decodedText || '').trim();
+      if (!code) return;
+      lastCode = code;
+      lastCodeEl.textContent = code;
+      lastCodeEl.style.display = 'block';
+      sendButton.disabled = false;
+      if (code !== lastSentCode) {
+        setStatus('Code scanned. Sending it to Shopify verification…', 'success');
+        sendLastCode();
+      }
+    }
+
+    function onScanFailure() {
+      if (clearCodeTimer) return;
+      clearCodeTimer = setTimeout(function() {
+        lastCode = '';
+        lastSentCode = '';
+        clearCodeTimer = null;
+      }, 900);
+    }
+
+    function sendLastCode(force) {
+      if (!lastCode) return;
+      if (!force && lastCode === lastSentCode) return;
+      if (!window.opener || !returnOrigin) {
+        setStatus('This page was not opened by the dashboard. Reopen the scanner from the app to send this code.', 'error');
+        return;
+      }
+      if (!force && lastCode === lastSentCode) return;
+      lastSentCode = lastCode;
+      try {
+        window.opener.postMessage({ type: 'METTWEAR_SCAN_RESULT', code: lastCode }, returnOrigin);
+        setStatus('Code sent to the dashboard for Shopify verification.', 'success');
+      } catch (error) {
+        setStatus('Could not return the code to the dashboard. Keep this page open and try again.', 'error');
+      }
+    }
+
+    async function startScanner() {
+      if (scanner) return;
+      if (!window.Html5Qrcode) {
+        setStatus('Scanner library did not load. Check your internet connection or the CDN access.', 'error');
+        return;
+      }
+      try {
+        const formats = supportedFormats();
+        scanner = new Html5Qrcode('reader', formats ? { formatsToSupport: formats, verbose: false } : { verbose: false });
+        document.getElementById('startButton').disabled = true;
+        setStatus('Requesting camera permission…');
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0, disableFlip: false },
+          onScanSuccess,
+          onScanFailure
+        );
+        document.getElementById('stopButton').disabled = false;
+        cameraPlaceholder.style.display = 'none';
+        setStatus('Camera is ready. Center the QR code or barcode in the frame.');
+      } catch (error) {
+        scanner = null;
+        document.getElementById('startButton').disabled = false;
+        document.getElementById('stopButton').disabled = true;
+        cameraPlaceholder.style.display = 'flex';
+        setStatus('Could not start the camera: ' + (error && error.message ? error.message : String(error)), 'error');
+      }
+    }
+
+    async function stopScanner() {
+      if (!scanner) return;
+      try {
+        if (scanner.isScanning) await scanner.stop();
+        await scanner.clear();
+      } catch (error) { /* best-effort camera cleanup */ }
+      scanner = null;
+      document.getElementById('startButton').disabled = false;
+      document.getElementById('stopButton').disabled = true;
+      cameraPlaceholder.style.display = 'flex';
+      setStatus('Camera stopped.');
+    }
+
+    window.addEventListener('beforeunload', function() { stopScanner(); });
+  </script>
+</body>
+</html>
